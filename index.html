@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>1Zeichen</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<style>
+  body{font-family:-apple-system,sans-serif;background:#0d0d0d;color:#eee;text-align:center;padding:20px;}
+  h1{font-size:1.1em;color:#7fd;}
+  .braille{font-size:4em;margin:20px 0;letter-spacing:.2em;user-select:all;}
+  input,select,button{font-size:1.1em;padding:10px;margin:6px;border-radius:8px;border:none;}
+  input[type=number]{width:70px;text-align:center;}
+  button{background:#2b8;color:#fff;cursor:pointer;}
+  #decodeOut{font-size:1.3em;margin-top:10px;color:#ffb;}
+  .row{margin:10px 0;}
+  small{color:#888;}
+</style>
+</head>
+<body>
+<h1>Ein-Zeichen Code</h1>
+
+<div class="row">
+  <b>Codieren</b><br>
+  Stunde: <input type="number" id="h" min="0" max="23" value="17">
+  Viertel: <select id="m"><option>0</option><option>1</option><option>2</option><option>3</option></select>
+  Status:
+  <select id="s"><option value="1">kann</option><option value="0">kann nicht</option></select>
+  <br>
+  Passphrase (geteiltes Geheimnis): <input type="text" id="key" value="motorrad" style="width:140px;">
+  <br>
+  <button onclick="encode()">Erzeugen</button>
+</div>
+
+<div class="braille" id="out">⠀</div>
+<small id="hint"></small>
+
+<hr>
+
+<div class="row">
+  <b>Decodieren</b><br>
+  Zeichen einfügen: <input type="text" id="inChar" style="width:60px;font-size:1.5em;">
+  <button onclick="decode()">Entschlüsseln</button>
+</div>
+<div id="decodeOut"></div>
+
+<script>
+function dayKey(passphrase){
+  const d = new Date();
+  const dayNum = Math.floor(d.getTime()/86400000); // Tage seit Epoch, ändert sich täglich
+  let hash = dayNum;
+  for(let i=0;i<passphrase.length;i++){
+    hash = (hash * 31 + passphrase.charCodeAt(i)) % 256;
+  }
+  return hash & 0xFF;
+}
+
+function encode(){
+  const h = parseInt(document.getElementById('h').value) % 24;
+  const m = parseInt(document.getElementById('m').value) % 4;
+  const s = parseInt(document.getElementById('s').value) % 2;
+  const key = document.getElementById('key').value;
+  const n = (h*8 + m*2 + s) & 0xFF; // 0..191, passt in ein Byte
+  const k = dayKey(key);
+  const c = n ^ k;
+  const code = 0x2800 + c;
+  document.getElementById('out').textContent = String.fromCodePoint(code);
+  document.getElementById('hint').textContent = "Heutiger Schlüssel: " + k + " (ändert sich morgen automatisch)";
+}
+
+function decode(){
+  const ch = document.getElementById('inChar').value.trim();
+  const key = document.getElementById('key').value;
+  if(!ch){ return; }
+  const code = ch.codePointAt(0);
+  const c = code - 0x2800;
+  const k = dayKey(key);
+  const n = c ^ k;
+  const h = Math.floor(n/8);
+  const m = Math.floor((n%8)/2);
+  const s = n%2;
+  document.getElementById('decodeOut').textContent =
+    "Uhrzeit: " + h + ":" + (m*15).toString().padStart(2,'0') +
+    " | Status: " + (s===1 ? "kann" : "kann nicht");
+}
+
+encode();
+</script>
+</body>
+</html>
