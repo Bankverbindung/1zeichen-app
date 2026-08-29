@@ -1,19 +1,124 @@
-<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Tool</title><link rel="manifest" href="manifest.json"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><style>body{font-family:-apple-system,sans-serif;background:#0d0d0d;color:#eee;text-align:center;padding:20px}h1{font-size:1.1em;color:#7fd}.braille{font-size:4em;margin:20px 0;letter-spacing:.2em;user-select:all}input,select,button{font-size:1.1em;padding:10px;margin:6px;border-radius:8px;border:none}input[type=number]{width:70px;text-align:center}button{background:#2b8;color:#fff;cursor:pointer}#decodeOut{font-size:1.3em;margin-top:10px;color:#ffb}.row{margin:10px 0}.hint{background:#222;border:2px solid #2b8;border-radius:10px;padding:14px 18px;margin:14px auto;max-width:340px;font-size:1.15em;font-weight:bold;color:#9f9}#copyToast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2b8;color:#fff;padding:10px 18px;border-radius:20px;opacity:0;transition:opacity .25s ease;pointer-events:none;font-size:.9em}#copyToast.show{opacity:1}</style></head><body>
+<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>Tool</title><link rel="manifest" href="manifest.json"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:#0d0d0d;color:#eee;text-align:center;padding:20px;margin:0}
+h1{font-size:1.1em;color:#7fd;margin-bottom:16px}
+.braille{font-size:4em;margin:20px 0;letter-spacing:.2em;user-select:all}
+.row{margin:14px 0}
+b{color:#aaa;font-size:.85em;letter-spacing:.05em;text-transform:uppercase}
+.hint{background:#1a1a1a;border:1px solid #2b8;border-radius:8px;padding:12px 16px;margin:12px auto;max-width:340px;font-size:1.1em;font-weight:600;color:#9f9}
+hr{border:none;border-top:1px solid #222;margin:20px 0}
+input[type=text]{font-size:1.1em;padding:9px 12px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#eee;width:160px}
+.stepper{display:inline-flex;align-items:center;gap:0;background:#1a1a1a;border:1px solid #333;border-radius:8px;overflow:hidden;margin:4px}
+.stepper button{background:none;border:none;color:#7fd;font-size:1.3em;padding:8px 13px;cursor:pointer;line-height:1;transition:background .15s}
+.stepper button:active{background:#2a2a2a}
+.stepper span{min-width:36px;text-align:center;font-size:1.05em;font-variant-numeric:tabular-nums;color:#eee;padding:0 2px}
+.time-display{font-size:1.4em;font-variant-numeric:tabular-nums;color:#fff;letter-spacing:.05em;margin:6px 0 10px}
+button.action{font-size:1.05em;padding:10px 20px;border-radius:8px;border:none;background:#2b8;color:#fff;cursor:pointer;margin:6px 4px;transition:background .15s}
+button.action:active{background:#1a7}
+button.paste{background:#1a1a1a;border:1px solid #444;color:#aaa;font-size:1em;padding:8px 14px;border-radius:8px;cursor:pointer;margin-left:6px;transition:background .15s}
+button.paste:active{background:#2a2a2a}
+.decode-row{display:inline-flex;align-items:center;gap:6px;margin:8px 0}
+input#inChar{width:56px;font-size:1.5em;padding:7px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:#eee;text-align:center}
+#copyToast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2b8;color:#fff;padding:9px 18px;border-radius:20px;opacity:0;transition:opacity .2s ease;pointer-events:none;font-size:.9em}
+#copyToast.show{opacity:1}
+</style></head><body>
 <h1>Ein-Zeichen Code</h1>
-<div class="row"><b>Codieren</b><br>Stunde: <input type="number" id="h" min="0" max="23" value="17"> Viertel: <select id="m"><option>0</option><option>1</option><option>2</option><option>3</option></select><br>Passphrase: <input type="text" id="key" value="" placeholder="Passphrase" style="width:160px;"><br><button onclick="encode()">Erzeugen</button></div>
+
+<div class="row">
+  <b>Codieren</b><br><br>
+  <div class="stepper" id="stepH">
+    <button onclick="stepHour(-1)">&#8593;</button>
+    <span id="hDisp">17</span>
+    <button onclick="stepHour(1)">&#8595;</button>
+  </div>
+  <span style="font-size:1.3em;color:#555;margin:0 2px">:</span>
+  <div class="stepper" id="stepM">
+    <button onclick="stepMin(-1)">&#8593;</button>
+    <span id="mDisp">00</span>
+    <button onclick="stepMin(1)">&#8595;</button>
+  </div>
+  <br><br>
+  Passphrase: <input type="text" id="key" placeholder="Passphrase"><br>
+  <button class="action" onclick="encode()">Erzeugen</button>
+</div>
+
 <div class="braille" id="out">⠀</div>
 <div class="hint" id="hint">Erst Passphrase eingeben, dann erzeugen.</div>
+
 <hr>
-<div class="row"><b>Decodieren</b><br>Zeichen: <input type="text" id="inChar" style="width:60px;font-size:1.5em;"><button onclick="decode()">Entschlüsseln</button></div>
+
+<div class="row">
+  <b>Decodieren</b><br><br>
+  <div class="decode-row">
+    <input type="text" id="inChar" maxlength="2">
+    <button class="paste" onclick="pasteChar()" title="Aus Zwischenablage">↳ Einfügen</button>
+  </div>
+  <br>
+  <button class="action" onclick="decode()">Entschlüsseln</button>
+</div>
 <div class="hint" id="decodeOut">—</div>
+
 <div id="copyToast">Kopiert</div>
+
 <script>
-function dayKey(passphrase){const d=new Date();const dayNum=Math.floor(d.getTime()/86400000);let hash=dayNum;for(let i=0;i<passphrase.length;i++){hash=(hash*31+passphrase.charCodeAt(i))%256;}return hash&0xFF;}
-function loadSavedPassphrase(){const saved=localStorage.getItem('passphrase');if(saved){document.getElementById('key').value=saved;}}
-function encode(){const h=parseInt(document.getElementById('h').value)%24;const m=parseInt(document.getElementById('m').value)%4;const key=document.getElementById('key').value;localStorage.setItem('passphrase',key);const n=(h*4+m)&0xFF;const k=dayKey(key);const c=n^k;const code=0x2800+c;const char=String.fromCodePoint(code);document.getElementById('out').textContent=char;document.getElementById('hint').textContent="Schlüssel heute: "+k+" — kopiert.";copyToClipboard(char);}
-function decode(){const ch=document.getElementById('inChar').value.trim();const key=document.getElementById('key').value;if(!ch){return;}const code=ch.codePointAt(0);const c=code-0x2800;const k=dayKey(key);const n=c^k;const h=Math.floor(n/4);const m=n%4;document.getElementById('decodeOut').textContent=h+":"+(m*15).toString().padStart(2,'0');}
-function copyToClipboard(text){if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).then(()=>showToast('Kopiert')).catch(()=>fallbackCopy(text));}else{fallbackCopy(text);}}
-function fallbackCopy(text){const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();try{document.execCommand('copy');showToast('Kopiert');}catch(e){}document.body.removeChild(ta);}
-function showToast(msg){const t=document.getElementById('copyToast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1200);}
-loadSavedPassphrase();
+let hVal=17, mVal=0;
+
+function stepHour(d){hVal=(hVal+d+24)%24;document.getElementById('hDisp').textContent=hVal;}
+function stepMin(d){mVal=(mVal+d+4)%4;document.getElementById('mDisp').textContent=(mVal*15).toString().padStart(2,'0');}
+
+function dayKey(p){const d=new Date();const dn=Math.floor(d.getTime()/86400000);let h=dn;for(let i=0;i<p.length;i++){h=(h*31+p.charCodeAt(i))%256;}return h&0xFF;}
+
+function loadSaved(){const s=localStorage.getItem('passphrase');if(s)document.getElementById('key').value=s;}
+
+function encode(){
+  const key=document.getElementById('key').value;
+  localStorage.setItem('passphrase',key);
+  const n=(hVal*4+mVal)&0xFF;
+  const k=dayKey(key);
+  const c=n^k;
+  const char=String.fromCodePoint(0x2800+c);
+  document.getElementById('out').textContent=char;
+  document.getElementById('hint').textContent='Schlüssel heute: '+k+' — kopiert.';
+  copyToClipboard(char);
+}
+
+function decode(){
+  const ch=document.getElementById('inChar').value.trim();
+  const key=document.getElementById('key').value;
+  if(!ch)return;
+  const c=ch.codePointAt(0)-0x2800;
+  const k=dayKey(key);
+  const n=c^k;
+  const h=Math.floor(n/4);
+  const m=n%4;
+  document.getElementById('decodeOut').textContent=h+':'+(m*15).toString().padStart(2,'0');
+}
+
+function pasteChar(){
+  if(navigator.clipboard&&navigator.clipboard.readText){
+    navigator.clipboard.readText().then(t=>{
+      document.getElementById('inChar').value=t.trim().slice(0,2);
+    }).catch(()=>showToast('Zugriff verweigert'));
+  } else {
+    showToast('Nicht unterstützt');
+  }
+}
+
+function copyToClipboard(text){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>showToast('Kopiert')).catch(()=>fallbackCopy(text));
+  } else {fallbackCopy(text);}
+}
+function fallbackCopy(text){
+  const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');showToast('Kopiert');}catch(e){}
+  document.body.removeChild(ta);
+}
+function showToast(msg){
+  const t=document.getElementById('copyToast');t.textContent=msg;
+  t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1400);
+}
+
+loadSaved();
 </script></body></html>
